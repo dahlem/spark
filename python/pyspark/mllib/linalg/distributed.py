@@ -151,6 +151,47 @@ class RowMatrix(DistributedMatrix):
         """
         return self._java_matrix_wrapper.call("numCols")
 
+    def columnSimilarities(self, threshold):
+        """
+        Compute similarities between columns of this matrix using a sampling approach.
+   
+        The threshold parameter is a trade-off knob between estimate quality and computational cost.
+   
+        Setting a threshold of 0 guarantees deterministic correct results, but comes at exactly
+        the same cost as the brute-force approach. Setting the threshold to positive values
+        incurs strictly less computational cost than the brute-force approach, however the
+        similarities computed will be estimates.
+   
+        The sampling guarantees relative-error correctness for those pairs of columns that have
+        similarity greater than the given similarity threshold.
+   
+        To describe the guarantee, we set some notation:
+        Let A be the smallest in magnitude non-zero element of this matrix.
+        Let B be the largest  in magnitude non-zero element of this matrix.
+        Let L be the maximum number of non-zeros per row.
+   
+        For example, for {0,1} matrices: A=B=1.
+        Another example, for the Netflix matrix: A=1, B=5
+   
+        For those column pairs that are above the threshold,
+        the computed similarity is correct to within 20% relative error with probability
+        at least 1 - (0.981)^10/B^
+   
+        The shuffle size is bounded by the *smaller* of the following two expressions:
+   
+        O(n log(n) L / (threshold * A))
+        O(m L^2^)
+   
+        The latter is the cost of the brute-force approach, so for non-zero thresholds,
+        the cost is always cheaper than the brute-force approach.
+   
+        :param threshold: Set to 0 for deterministic guaranteed correctness.
+                         Similarities above this threshold are estimated
+                         with the cost vs estimate quality trade-off described above.
+        :return A n x n sparse upper-triangular matrix of cosine similarities
+                between columns of this matrix.
+        """
+        return CoordinateMatrix(self._java_matrix_wrapper.call("columnSimilarities", float(threshold)))
 
 class IndexedRow(object):
     """
